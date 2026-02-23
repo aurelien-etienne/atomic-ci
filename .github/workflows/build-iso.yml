@@ -74,6 +74,12 @@ on:
       REGISTRY_TOKEN:
         description: "The token to use for the registry"
         required: true
+      LUKS_PLACEHOLDER_PASS:
+        description: "The LUKS temporary passphrase"
+        required: false
+      EARLY_SETUP_PASS:
+        description: "The temporary early-setup user password"
+        required: false
       R2_ACCOUNT_ID:
         description: "Cloudflare R2 account ID"
         required: false
@@ -111,6 +117,9 @@ jobs:
 
   build-iso:
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    env:
+      LUKS_PASS: ${{ secrets.LUKS_PLACEHOLDER_PASS }}
+      USER_PASS: ${{ secrets.EARLY_SETUP_PASS }}
     needs: generate_matrix
     strategy:
       fail-fast: false
@@ -130,6 +139,13 @@ jobs:
           repository: catch-404/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
           path: github-actions
+
+      - name: Inject secrets into iso.toml
+        if: env.LUKS_PASS != '' && env.USER_PASS != ''
+        shell: bash
+        run: |
+          sed -i "s/--passphrase=placeholder/--passphrase=${LUKS_PASS}/" ${{ inputs.config-file }}
+          sed -i "s/--password=placeholder/--password=${USER_PASS}/" ${{ inputs.config-file }}
 
       - name: Build ISO
         id: build-iso
