@@ -94,7 +94,7 @@ on:
         required: false
 
 env:
-  INTERNAL_ACTIONS_REF: v11
+  INTERNAL_ACTIONS_REF: main
 
 jobs:
   generate_matrix:
