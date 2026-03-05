@@ -153,10 +153,7 @@ jobs:
     name: Build and push image
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     env:
-      RDP_ENDPOINT: ${{ secrets.RDP_ENDPOINT }}
-      WG_ALLOWEDIPS: ${{ secrets.WG_ALLOWEDIPS }}
       WG_PUBLIC_KEY: ${{ secrets.WG_PUBLIC_KEY }}
-      WG_ENDPOINT: ${{ secrets.WG_ENDPOINT }}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
