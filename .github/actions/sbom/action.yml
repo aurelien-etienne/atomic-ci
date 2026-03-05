@@ -45,16 +45,36 @@ runs:
         for SWAP in $SWAPS; do
             sudo rm -f "$SWAP"
         done
+
         SWAP_FILE="/mnt/swapfile"
         SWAP_FILE_2="/swapfile"
-        sudo fallocate -l 70G "$SWAP_FILE"
-        sudo fallocate -l 16G "$SWAP_FILE_2"
-        sudo chmod 600 "$SWAP_FILE"
-        sudo chmod 600 "$SWAP_FILE_2"
-        sudo mkswap "$SWAP_FILE"
-        sudo mkswap "$SWAP_FILE_2"
-        sudo swapon "$SWAP_FILE"
-        sudo swapon "$SWAP_FILE_2"
+
+        # Check whether /mnt is a separate volume or just a dir on root
+        MNT_DEV=$(stat -c %d /mnt)
+        ROOT_DEV=$(stat -c %d /)
+
+        if [ "$MNT_DEV" != "$ROOT_DEV" ]; then
+          # /mnt is a real separate volume — original hardcoded sizes are safe
+          sudo fallocate -l 70G "$SWAP_FILE"
+          sudo fallocate -l 16G "$SWAP_FILE_2"
+          sudo chmod 600 "$SWAP_FILE" "$SWAP_FILE_2"
+          sudo mkswap "$SWAP_FILE" && sudo swapon "$SWAP_FILE"
+          sudo mkswap "$SWAP_FILE_2" && sudo swapon "$SWAP_FILE_2"
+        else
+          # /mnt shares root — size dynamically to avoid filling the disk
+          # Leave 10G headroom for the build, cap at 86G (original total)
+          AVAIL_KB=$(df --output=avail / | tail -1)
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          SWAP_GB=$(( AVAIL_GB - 10 ))
+          SWAP_GB=$(( SWAP_GB > 86 ? 86 : SWAP_GB ))
+          if [ "$SWAP_GB" -gt 0 ]; then
+            sudo fallocate -l "${SWAP_GB}G" "$SWAP_FILE"
+            sudo chmod 600 "$SWAP_FILE"
+            sudo mkswap "$SWAP_FILE" && sudo swapon "$SWAP_FILE"
+          fi
+        fi
+
+
         echo "=== FREE SPACE ==="
         df -h
         echo "=== MEMORY AND SWAP ==="
