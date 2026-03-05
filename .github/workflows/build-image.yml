@@ -195,15 +195,15 @@ jobs:
       - name: Inject secrets into wg0.conf
         shell: bash
         run: |
-          sed -i "s/AllowedIPs = GH_SEC_WG_ALLOWEDIPS/AllowedIPs = ${WG_ALLOWEDIPS}/" ./files/system/etc/wireguard/wg0.conf
-          sed -i "s/PublicKey = GH_SEC_WG_PUBLIC_KEY/PublicKey = ${WG_PUBLIC_KEY}/" ./files/system/etc/wireguard/wg0.conf
-          sed -i "s/Endpoint = GH_SEC_WG_ENDPOINT/Endpoint = ${WG_ENDPOINT}/" ./files/system/etc/wireguard/wg0.conf
+          sed -i 's|AllowedIPs = GH_SEC_WG_ALLOWEDIPS|AllowedIPs = ${WG_ALLOWEDIPS}|' ./files/system/etc/wireguard/wg0.conf
+          sed -i 's|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = ${WG_PUBLIC_KEY}|' ./files/system/etc/wireguard/wg0.conf
+          sed -i 's|Endpoint = GH_SEC_WG_ENDPOINT|Endpoint = ${WG_ENDPOINT}|' ./files/system/etc/wireguard/wg0.conf
 
       - name: Inject rdp endpoint into krdc config and desktop files
         shell: bash
         run: |
-          sed -i "s/GH_SEC_RDP_ENDPOINT/${RDP_ENDPOINT}/" ./files/system/etc/skel/.config/autostart/org.kde.krdc.desktop
-          sed -i "s/GH_SEC_RDP_ENDPOINT/${RDP_ENDPOINT}/" ./files/system/etc/skel/.config/krdcrc
+          sed -i 's|GH_SEC_RDP_ENDPOINT|${RDP_ENDPOINT}|' ./files/system/etc/skel/.config/autostart/org.kde.krdc.desktop
+          sed -i 's|GH_SEC_RDP_ENDPOINT|${RDP_ENDPOINT}|' ./files/system/etc/skel/.config/krdcrc
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
