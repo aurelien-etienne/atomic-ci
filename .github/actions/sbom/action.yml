@@ -62,10 +62,10 @@ runs:
           sudo mkswap "$SWAP_FILE_2" && sudo swapon "$SWAP_FILE_2"
         else
           # /mnt shares root — size dynamically to avoid filling the disk
-          # Leave 10G headroom for the build, cap at 86G (original total)
+          # Leave 15G headroom for the build, cap at 86G (original total)
           AVAIL_KB=$(df --output=avail / | tail -1)
           AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
-          SWAP_GB=$(( AVAIL_GB - 10 ))
+          SWAP_GB=$(( AVAIL_GB - 15 ))
           SWAP_GB=$(( SWAP_GB > 86 ? 86 : SWAP_GB ))
           if [ "$SWAP_GB" -gt 0 ]; then
             sudo fallocate -l "${SWAP_GB}G" "$SWAP_FILE"
