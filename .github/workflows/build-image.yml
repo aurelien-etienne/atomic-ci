@@ -101,13 +101,8 @@ on:
       REGISTRY_TOKEN:
         description: "The token to use for the registry"
         required: true
-      RDP_ENDPOINT:
-        required: true
-      WG_ALLOWEDIPS:
-        required: true
       WG_PUBLIC_KEY:
-        required: true
-      WG_ENDPOINT:
+        description: "Wireguard public key for the server"
         required: true
       SIGNING_SECRET:
         description: "The private key used to sign the image"
@@ -192,18 +187,10 @@ jobs:
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
           path: github-actions
 
-      - name: Inject secrets into wg0.conf
+      - name: Inject wireguard public key into wg0.conf
         shell: bash
         run: |
-          sed -i 's|AllowedIPs = GH_SEC_WG_ALLOWEDIPS|AllowedIPs = ${WG_ALLOWEDIPS}|' ./files/system/etc/wireguard/wg0.conf
           sed -i 's|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = ${WG_PUBLIC_KEY}|' ./files/system/etc/wireguard/wg0.conf
-          sed -i 's|Endpoint = GH_SEC_WG_ENDPOINT|Endpoint = ${WG_ENDPOINT}|' ./files/system/etc/wireguard/wg0.conf
-
-      - name: Inject rdp endpoint into krdc config and desktop files
-        shell: bash
-        run: |
-          sed -i 's|GH_SEC_RDP_ENDPOINT|${RDP_ENDPOINT}|' ./files/system/etc/skel/.config/autostart/org.kde.krdc.desktop
-          sed -i 's|GH_SEC_RDP_ENDPOINT|${RDP_ENDPOINT}|' ./files/system/etc/skel/.config/krdcrc
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
