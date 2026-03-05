@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Fetch Changelogs
         id: download-changelogs
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v4
         with:
           pattern: changelog-${{ inputs.image-name }}-*
           merge-multiple: true
@@ -36,7 +36,7 @@ jobs:
 
       - name: Fetch SBOMs
         id: download-sbom
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v4
         with:
           pattern: "*.spdx.json"
           merge-multiple: true
@@ -46,7 +46,7 @@ jobs:
         id: compress-sbom
         shell: bash
         run: |
-          cd ${{ steps.download-sbom.outputs.download-path }}
+          mkdir -p "${{ steps.download-sbom.outputs.download-path }}" && cd $_
           for f in *.spdx.json; do
             gzip -9 "$f"
           done
