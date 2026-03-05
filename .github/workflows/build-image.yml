@@ -101,6 +101,14 @@ on:
       REGISTRY_TOKEN:
         description: "The token to use for the registry"
         required: true
+      RDP_ENDPOINT:
+        required: true
+      WG_ALLOWEDIPS:
+        required: true
+      WG_PUBLIC_KEY:
+        required: true
+      WG_ENDPOINT:
+        required: true
       SIGNING_SECRET:
         description: "The private key used to sign the image"
         required: false
@@ -149,6 +157,11 @@ jobs:
   build_push:
     name: Build and push image
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    env:
+      RDP_ENDPOINT: ${{ secrets.RDP_ENDPOINT }}
+      WG_ALLOWEDIPS: ${{ secrets.WG_ALLOWEDIPS }}
+      WG_PUBLIC_KEY: ${{ secrets.WG_PUBLIC_KEY }}
+      WG_ENDPOINT: ${{ secrets.WG_ENDPOINT }}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
@@ -178,6 +191,19 @@ jobs:
           repository: aurelien-etienne/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
           path: github-actions
+
+      - name: Inject secrets into wg0.conf
+        shell: bash
+        run: |
+          sed -i "s/AllowedIPs = GH_SEC_WG_ALLOWEDIPS/AllowedIPs = ${WG_ALLOWEDIPS}/" ./files/system/etc/wireguard/wg0.conf
+          sed -i "s/PublicKey = GH_SEC_WG_PUBLIC_KEY/PublicKey = ${WG_PUBLIC_KEY}/" ./files/system/etc/wireguard/wg0.conf
+          sed -i "s/Endpoint = GH_SEC_WG_ENDPOINT/Endpoint = ${WG_ENDPOINT}/" ./files/system/etc/wireguard/wg0.conf
+
+      - name: Inject rdp endpoint into krdc config and desktop files
+        shell: bash
+        run: |
+          sed -i "s/GH_SEC_RDP_ENDPOINT/${RDP_ENDPOINT}/" ./files/system/etc/skel/.config/autostart/org.kde.krdc.desktop
+          sed -i "s/GH_SEC_RDP_ENDPOINT/${RDP_ENDPOINT}/" ./files/system/etc/skel/.config/krdcrc
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
