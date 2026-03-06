@@ -185,7 +185,7 @@ jobs:
       - name: Inject wireguard public key into wg0.conf
         shell: bash
         run: |
-          sed -i 's|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = ${WG_PUBLIC_KEY}|' ./files/system/etc/wireguard/wg0.conf
+          sed -i "s|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = ${WG_PUBLIC_KEY}|" ./files/system/etc/wireguard/wg0.conf
 
       - name: Inject ssh public keys into authorized_keys
         shell: bash
