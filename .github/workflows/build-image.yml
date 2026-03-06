@@ -101,9 +101,6 @@ on:
       REGISTRY_TOKEN:
         description: "The token to use for the registry"
         required: true
-      WG_PUBLIC_KEY:
-        description: "Wireguard public key for the server"
-        required: true
       SIGNING_SECRET:
         description: "The private key used to sign the image"
         required: false
@@ -153,7 +150,7 @@ jobs:
     name: Build and push image
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     env:
-      WG_PUBLIC_KEY: ${{ secrets.WG_PUBLIC_KEY }}
+      WG_PUBLIC_KEY: ${{ vars.WG_PUBLIC_KEY }}
       SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
     timeout-minutes: 60
     needs: generate_matrix
