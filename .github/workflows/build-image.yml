@@ -154,6 +154,7 @@ jobs:
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     env:
       WG_PUBLIC_KEY: ${{ secrets.WG_PUBLIC_KEY }}
+      SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
@@ -188,6 +189,12 @@ jobs:
         shell: bash
         run: |
           sed -i 's|PublicKey = GH_SEC_WG_PUBLIC_KEY|PublicKey = ${WG_PUBLIC_KEY}|' ./files/system/etc/wireguard/wg0.conf
+
+      - name: Inject ssh public keys into authorized_keys
+        shell: bash
+        run: |
+          mkdir -p ./files/system/etc/skel/.ssh
+          echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/etc/skel/.ssh/authorized_keys
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
