@@ -108,6 +108,7 @@ runs:
           --device /dev/fuse \
           --timestamp=0 \
           --iidfile /tmp/image-id \
+          --secret id=mok_key,src=/tmp/mok.key \
           --build-arg IMAGE_NAME=${{ inputs.image-name }} \
           --build-arg IMAGE_REGISTRY=${{ inputs.REGISTRY }}/${{ inputs.image-path }} \
           --build-arg VARIANT=${{ inputs.variant }} \

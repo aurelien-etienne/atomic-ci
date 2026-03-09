@@ -200,9 +200,7 @@ jobs:
       - name: Inject dkms key
         shell: bash
         run: |
-          mkdir -p ./files/system/var/lib/dkms
-          echo "${DKMS_KEY}" > ./files/system/var/lib/dkms/mok.key
-          chmod 600 ./files/system/var/lib/dkms/mok.key
+          echo "${DKMS_KEY}" > /tmp/mok.key
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
@@ -222,6 +220,12 @@ jobs:
           REGISTRY: ${{ inputs.REGISTRY }}
           REGISTRY_USER: ${{ inputs.REGISTRY_USER }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Cleanup dkms key
+        shell: bash
+        if: always()
+        run: |
+          rm -f /tmp/mok.key
 
       - uses: ./github-actions/.github/actions/sbom
         name: Generate SBOM
