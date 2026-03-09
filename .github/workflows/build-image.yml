@@ -201,6 +201,7 @@ jobs:
         shell: bash
         run: |
           echo "${DKMS_KEY}" > /tmp/mok.key
+          chmod 600 /tmp/mok.key
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
