@@ -140,7 +140,7 @@ jobs:
         if: env.LUKS_PASS != ''
         shell: bash
         run: |
-          sed -i "s/--passphrase=placeholder/--passphrase=${LUKS_PASS}/" ${{ inputs.config-file }}
+          sed -i "s/PLACEHOLDER/${LUKS_PASS}/" ${{ inputs.config-file }}
 
       - name: Build ISO
         id: build-iso
