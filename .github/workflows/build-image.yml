@@ -104,6 +104,9 @@ on:
       SIGNING_SECRET:
         description: "The private key used to sign the image"
         required: false
+      DKMS_KEY:
+        description: "Private key used by dkms"
+        required: true
       AWS_ROLE_ARN:
         description: "The AWS role ARN to assume for S3 uploads"
         required: false
@@ -152,6 +155,7 @@ jobs:
     env:
       WG_PUBLIC_KEY: ${{ vars.WG_PUBLIC_KEY }}
       SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
+      DKMS_KEY: ${{ secrets.DKMS_KEY }}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
@@ -192,6 +196,13 @@ jobs:
         run: |
           mkdir -p ./files/system/etc/skel/.ssh
           echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/etc/skel/.ssh/authorized_keys
+
+      - name: Inject dkms key
+        shell: bash
+        run: |
+          mkdir -p ./files/system/var/lib/dkms
+          echo "${DKMS_KEY}" > ./files/system/var/lib/dkms/mok.key
+          chmod 600 ./files/system/var/lib/dkms/mok.key
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
