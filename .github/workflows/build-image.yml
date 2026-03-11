@@ -195,7 +195,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p ./files/system/etc/skel/.ssh
-          echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/etc/skel/.ssh/authorized_keys
+          echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
 
       - name: Inject dkms key
         shell: bash
