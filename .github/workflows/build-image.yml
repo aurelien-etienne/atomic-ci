@@ -106,7 +106,7 @@ on:
         required: false
       DKMS_KEY:
         description: "Private key used by dkms"
-        required: true
+        required: false
       AWS_ROLE_ARN:
         description: "The AWS role ARN to assume for S3 uploads"
         required: false
@@ -198,6 +198,7 @@ jobs:
           echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
 
       - name: Inject dkms key
+        if: ${{ env.DKMS_KEY != '' }}
         shell: bash
         run: |
           echo "${DKMS_KEY}" > /tmp/mok.key
@@ -224,7 +225,7 @@ jobs:
 
       - name: Cleanup dkms key
         shell: bash
-        if: always()
+        if: ${{ always() && env.DKMS_KEY != '' }}
         run: |
           rm -f /tmp/mok.key
 
