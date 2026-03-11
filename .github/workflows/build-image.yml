@@ -194,7 +194,7 @@ jobs:
       - name: Inject ssh public keys into authorized_keys
         shell: bash
         run: |
-          mkdir -p ./files/system/etc/skel/.ssh
+          mkdir -p ./files/system/usr/ssh
           echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
 
       - name: Inject dkms key
