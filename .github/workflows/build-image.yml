@@ -198,7 +198,6 @@ jobs:
           echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
 
       - name: Inject dkms key
-        if: ${{ env.DKMS_KEY != '' }}
         shell: bash
         run: |
           echo "${DKMS_KEY}" > /tmp/mok.key
