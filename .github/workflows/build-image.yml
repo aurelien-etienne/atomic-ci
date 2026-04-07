@@ -107,6 +107,9 @@ on:
       DKMS_KEY:
         description: "Private key used by dkms"
         required: false
+      GHCR_PULL_AUTH_JSON:
+        description: "Config file for bootc with GH token with pull permissions"
+        required: true
       AWS_ROLE_ARN:
         description: "The AWS role ARN to assume for S3 uploads"
         required: false
@@ -156,6 +159,7 @@ jobs:
       WG_PUBLIC_KEY: ${{ vars.WG_PUBLIC_KEY }}
       SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
       DKMS_KEY: ${{ secrets.DKMS_KEY }}
+      GHCR_PULL_AUTH_JSON: ${{secrets.GHCR_PULL_AUTH_JSON}}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
@@ -195,13 +199,19 @@ jobs:
         shell: bash
         run: |
           mkdir -p ./files/system/usr/ssh
-          echo "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
+          printf '%s\n' "${SSH_AUTHORIZED_KEYS}" > ./files/system/usr/ssh/authorized_keys
 
       - name: Inject dkms key
         shell: bash
         run: |
-          echo "${DKMS_KEY}" > /tmp/mok.key
+          printf '%s' "${DKMS_KEY}" > /tmp/mok.key
           chmod 600 /tmp/mok.key
+
+      - name: Inject ghcr.io pull auth config
+        shell: bash
+        run: |
+          printf '%s' "${GHCR_PULL_AUTH_JSON}" > /tmp/auth.json
+          chmod 600 /tmp/auth.json
 
       - uses: ./github-actions/.github/actions/build
         name: Build image
@@ -227,6 +237,12 @@ jobs:
         if: ${{ always() && env.DKMS_KEY != '' }}
         run: |
           rm -f /tmp/mok.key
+
+      - name: Cleanup ghcr.io pull auth config
+        shell: bash
+        if: ${{ always() }}
+        run: |
+          rm -f /tmp/auth.json
 
       - uses: ./github-actions/.github/actions/sbom
         name: Generate SBOM
