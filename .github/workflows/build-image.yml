@@ -232,17 +232,11 @@ jobs:
           REGISTRY_USER: ${{ inputs.REGISTRY_USER }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Cleanup dkms key
-        shell: bash
-        if: ${{ always() && env.DKMS_KEY != '' }}
-        run: |
-          rm -f /tmp/mok.key
-
-      - name: Cleanup ghcr.io pull auth config
+      - name: Cleanup secrets
         shell: bash
         if: ${{ always() }}
         run: |
-          rm -f /tmp/auth.json
+          rm -f /tmp/mok.key /tmp/auth.json
 
       - uses: ./github-actions/.github/actions/sbom
         name: Generate SBOM
