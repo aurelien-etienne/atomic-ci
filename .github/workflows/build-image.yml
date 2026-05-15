@@ -160,6 +160,7 @@ jobs:
       SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
       DKMS_KEY: ${{ secrets.DKMS_KEY }}
       GHCR_PULL_AUTH_JSON: ${{secrets.GHCR_PULL_AUTH_JSON}}
+      GH_RD_PUBLIC_KEY: ${{ vars.GH_RD_PUBLIC_KEY }}
     timeout-minutes: 60
     needs: generate_matrix
     strategy:
@@ -189,6 +190,11 @@ jobs:
           repository: aurelien-etienne/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
           path: github-actions
+
+      - name: Inject RustDesk public key into RustDesk2.toml
+        shell: bash
+        run: |
+          sed -i "s|GH_RD_PUBLIC_KEY|'${GH_RD_PUBLIC_KEY}'|" ./files/system/etc/skel/.config/rustdesk/RustDesk2.toml
 
       - name: Inject wireguard public key into wg0.conf
         shell: bash
@@ -257,7 +263,6 @@ jobs:
           KMS_KEY_ALIAS: ${{ inputs.KMS_KEY_ALIAS }}
           AWS_REGION: ${{ inputs.AWS_REGION }}
           AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
 
   manifest:
     name: Create Manifest
