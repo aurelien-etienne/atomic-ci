@@ -81,6 +81,11 @@ on:
         description: "The AWS region to use for signing the image"
         required: false
         type: string
+      extra-publish-branches:
+        description: "Comma-separated branches (besides the default branch) that should publish a signed release, e.g. a long-lived variant branch"
+        required: false
+        type: string
+        default: ""
     outputs:
       image-ref:
         description: "The image reference of the built image"
@@ -120,6 +125,8 @@ env:
   IMAGE_REGISTRY: ${{ inputs.REGISTRY }}
   IMAGE_PATH: ${{ inputs.image-path }}
   SIGNING_ENABLED: ${{ (secrets.SIGNING_SECRET != null && secrets.SIGNING_SECRET != '') || inputs.KMS_KEY_ALIAS != '' }}
+  # True on the default branch, on a merged PR, or on any branch listed in extra-publish-branches.
+  IS_PUBLISH_REF: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true || contains(format(',{0},', inputs.extra-publish-branches), format(',{0},', github.ref_name)) }}
   INTERNAL_ACTIONS_REF: main
 
 concurrency:
@@ -247,7 +254,7 @@ jobs:
       - uses: ./github-actions/.github/actions/sbom
         name: Generate SBOM
         id: generate-sbom
-        if: ${{ inputs.generate-sbom == true && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true) }}
+        if: ${{ inputs.generate-sbom == true && env.IS_PUBLISH_REF == 'true' }}
         with:
           image-ref: ${{ steps.build.outputs.image-ref }}@${{ steps.build.outputs.digest }}
           artifact-name: ${{ inputs.image-name }}-${{ inputs.variant }}-${{ matrix.platform }}
@@ -255,7 +262,7 @@ jobs:
       - uses: ./github-actions/.github/actions/sign
         name: Sign image
         id: sign
-        if: ${{ env.SIGNING_ENABLED == 'true' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true) }}
+        if: ${{ env.SIGNING_ENABLED == 'true' && env.IS_PUBLISH_REF == 'true' }}
         with:
           image-ref: ${{ steps.build.outputs.image-ref }}@${{ steps.build.outputs.digest }}
           signing-secret: ${{ secrets.SIGNING_SECRET }}
@@ -307,7 +314,7 @@ jobs:
       - uses: ./github-actions/.github/actions/sign
         name: Sign Manifest
         id: sign
-        if: ${{ env.SIGNING_ENABLED == 'true' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true) }}
+        if: ${{ env.SIGNING_ENABLED == 'true' && env.IS_PUBLISH_REF == 'true' }}
         with:
           image-ref: ${{ steps.push_manifest.outputs.image-ref }}@${{ steps.push_manifest.outputs.digest }}
           signing-secret: ${{ secrets.SIGNING_SECRET }}
