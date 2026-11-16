@@ -136,7 +136,7 @@ concurrency:
 jobs:
   generate_matrix:
     name: Prepare build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       tag: ${{ steps.set-matrix.outputs.tag }}
@@ -273,7 +273,7 @@ jobs:
 
   manifest:
     name: Create Manifest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - generate_matrix
       - build_push
