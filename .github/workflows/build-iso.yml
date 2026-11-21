@@ -161,7 +161,7 @@ jobs:
         if: inputs.upload-to-github == true
         uses: ./github-actions/.github/actions/upload-gh
         with:
-          artifact_name: ${{ steps.build-iso.outputs.artifact_name }}
+          artifact-name: ${{ steps.build-iso.outputs.artifact_name }}
           directory: ${{ steps.build-iso.outputs.output_directory }}
 
       - name: Upload to Cloudflare

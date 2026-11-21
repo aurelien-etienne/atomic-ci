@@ -10,10 +10,6 @@ on:
         description: "The version of the image"
         required: true
         type: string
-      pretty-version:
-        description: "The pretty version of the image"
-        required: true
-        type: string
       latest-image-ref:
         description: "The latest image reference"
         required: true
@@ -23,12 +19,12 @@ permissions:
 
 jobs:
   create-release:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Fetch Changelogs
         id: download-changelogs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: changelog-${{ inputs.image-name }}-*
           merge-multiple: true
@@ -36,7 +32,7 @@ jobs:
 
       - name: Fetch SBOMs
         id: download-sbom
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: "*.spdx.json"
           merge-multiple: true
@@ -53,52 +49,46 @@ jobs:
 
       - name: Prepare Release
         id: prepare-release
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          VERSION: ${{ inputs.version }}
+          LATEST_IMAGE_REF: ${{ inputs.latest-image-ref }}
         shell: bash
         run: |
-          echo "Automated release for ${{ inputs.image-name }} version \`${{ inputs.version }}\`." > ./changelog.md
+          # The images in a release don't always have the same version: when a previous run only
+          # published some of them, those get a higher version in this one. Name the release after
+          # the highest version in the changelogs, falling back to the one from the build.
+          HIGHEST=$(sed -n 's/^### Version: //p' ${{ steps.download-changelogs.outputs.download-path }}/*.txt | sort -V | tail -1)
+          VERSION="${HIGHEST:-${VERSION}}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "Automated release for ${IMAGE_NAME} version \`${VERSION}\`." > ./changelog.md
 
           for changelog in ${{ steps.download-changelogs.outputs.download-path }}/*.txt; do
-            # Remove empty Package Changes
-            sed -i '/^#### Package Changes$/{
-            N
-            N
-            /#### Package Changes\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
-            }' $changelog
-
-            # Remove empty Commits
-            sed -i '/^#### Commits$/{
-            N
-            N
-            /#### Commits\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
-            }' $changelog
-
-            # If there are no changes, remove the section altogether
-            sed -zi 's/\n### Changes since[^#]*$//' $changelog
-
             cat $changelog >> ./changelog.md
           done
 
-          cat <<'EOF' >> ./changelog.md
+          cat <<EOF >> ./changelog.md
           ## How to rebase
 
           If you're already using this image, upgrade with the following command:
 
-          ```bash
+          \`\`\`bash
           sudo bootc upgrade
-          ```
+          \`\`\`
 
           To switch to this image from another, type the following command in your terminal:
 
-          ```bash
-          sudo bootc switch ${{ inputs.latest-image-ref }}
-          ```
+          \`\`\`bash
+          sudo bootc switch ${LATEST_IMAGE_REF}
+          \`\`\`
           EOF
 
       - name: Create Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          name: "${{ inputs.image-name }} version ${{ inputs.version }}"
-          tag_name: ${{ inputs.version }}
+          name: "${{ inputs.image-name }} version ${{ steps.prepare-release.outputs.version }}"
+          tag_name: ${{ steps.prepare-release.outputs.version }}
           body_path: ./changelog.md
           make_latest: true
           files: "${{ steps.download-sbom.outputs.download-path }}/*.spdx.json.gz"
