@@ -1,5 +1,6 @@
 ---
 name: SBOM Generation
+description: Generate a Software Bill of Materials (SBOM) for a given container image
 
 inputs:
   image-ref:
@@ -83,15 +84,20 @@ runs:
 
     - name: Setup Syft
       id: setup-syft
-      uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
 
     - name: Generate SBOM
       id: generate-sbom
       env:
         SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
+        # syft unpacks the whole image in its temporary directory. /tmp is a tmpfs with a quota
+        # in Ubuntu 26.04, which is too small for that, so use a directory in the disk.
+        TMPDIR: ${{ runner.temp }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        IMAGE_REF: ${{ inputs.image-ref }}
       shell: bash
       run: |
-        NAME=${{ inputs.artifact-name }}
+        NAME=${ARTIFACT_NAME}
         # Remove consecutive dashes (when there's no variant, for example)
         NAME=${NAME//--/-}
         # Set ARTIFACT_NAME for use in artifact upload (replace / with _)
@@ -99,12 +105,12 @@ runs:
 
         OUTPUT_PATH="$(mktemp -d)/${NAME//\//_}.spdx.json"
         export SYFT_PARALLELISM=$(($(nproc)*2))
-        $SYFT_CMD ${{ inputs.image-ref }} --select-catalogers "rpm,+sbom-cataloger" -o spdx-json=${OUTPUT_PATH}
+        $SYFT_CMD "${IMAGE_REF}" --select-catalogers "rpm,+sbom-cataloger" -o spdx-json=${OUTPUT_PATH}
         echo "OUTPUT_PATH=${OUTPUT_PATH}" >> $GITHUB_OUTPUT
 
     - name: Upload SBOM to Job Artifacts
       id: upload-sbom
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: ${{ steps.generate-sbom.outputs.ARTIFACT_NAME }}
         path: ${{ steps.generate-sbom.outputs.OUTPUT_PATH }}

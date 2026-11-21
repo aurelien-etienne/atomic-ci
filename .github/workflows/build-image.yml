@@ -81,11 +81,6 @@ on:
         description: "The AWS region to use for signing the image"
         required: false
         type: string
-      extra-publish-branches:
-        description: "Comma-separated branches (besides the default branch) that should publish a signed release, e.g. a long-lived variant branch"
-        required: false
-        type: string
-        default: ""
     outputs:
       image-ref:
         description: "The image reference of the built image"
@@ -116,18 +111,12 @@ on:
         description: "Config file for bootc with GH token with pull permissions"
         required: true
       AWS_ROLE_ARN:
-        description: "The AWS role ARN to assume for S3 uploads"
+        description: "The AWS role ARN to assume for signing the image"
         required: false
 
 env:
-  IMAGE_NAME: ${{ inputs.image-name }}
-  CONTAINERFILE: ${{ inputs.containerfile }}
-  IMAGE_REGISTRY: ${{ inputs.REGISTRY }}
-  IMAGE_PATH: ${{ inputs.image-path }}
   SIGNING_ENABLED: ${{ (secrets.SIGNING_SECRET != null && secrets.SIGNING_SECRET != '') || inputs.KMS_KEY_ALIAS != '' }}
-  # True on the default branch, on a merged PR, or on any branch listed in extra-publish-branches.
-  IS_PUBLISH_REF: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true || contains(format(',{0},', inputs.extra-publish-branches), format(',{0},', github.ref_name)) }}
-  INTERNAL_ACTIONS_REF: main
+  INTERNAL_ACTIONS_REF: sync-v13
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.image-name }}
@@ -136,16 +125,16 @@ concurrency:
 jobs:
   generate_matrix:
     name: Prepare build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       tag: ${{ steps.set-matrix.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Checkout github actions
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: aurelien-etienne/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
@@ -161,7 +150,7 @@ jobs:
 
   build_push:
     name: Build and push image
-    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     env:
       WG_PUBLIC_KEY: ${{ vars.WG_PUBLIC_KEY }}
       SSH_AUTHORIZED_KEYS: ${{ vars.SSH_AUTHORIZED_KEYS }}
@@ -178,21 +167,14 @@ jobs:
       packages: write
       id-token: write
 
-    outputs:
-      image-ref: ${{ steps.push.outputs.image-ref }}
-      digest: ${{ steps.push.outputs.digest }}
-      redhat-id: ${{ steps.check.outputs.redhat-id }}
-      redhat-version-id: ${{ steps.check.outputs.redhat-version-id }}
-      version: ${{ steps.load.outputs.version }}
-
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Fetch all history for changelog generation
 
       - name: Checkout github actions
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: aurelien-etienne/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
@@ -254,15 +236,18 @@ jobs:
       - uses: ./github-actions/.github/actions/sbom
         name: Generate SBOM
         id: generate-sbom
-        if: ${{ inputs.generate-sbom == true && env.IS_PUBLISH_REF == 'true' }}
+        if: ${{ inputs.generate-sbom == true && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.pull_request.merged == true) }}
         with:
           image-ref: ${{ steps.build.outputs.image-ref }}@${{ steps.build.outputs.digest }}
           artifact-name: ${{ inputs.image-name }}-${{ inputs.variant }}-${{ matrix.platform }}
 
+      # Builds of any branch are signed, so they can be tested in systems that verify signatures.
+      # Builds of pull requests are not, until they are merged: they run code that hasn't been
+      # reviewed, and anyone can open one.
       - uses: ./github-actions/.github/actions/sign
         name: Sign image
         id: sign
-        if: ${{ env.SIGNING_ENABLED == 'true' && env.IS_PUBLISH_REF == 'true' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' && (!startsWith(github.event_name, 'pull_request') || github.event.pull_request.merged == true) }}
         with:
           image-ref: ${{ steps.build.outputs.image-ref }}@${{ steps.build.outputs.digest }}
           signing-secret: ${{ secrets.SIGNING_SECRET }}
@@ -273,7 +258,7 @@ jobs:
 
   manifest:
     name: Create Manifest
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - generate_matrix
       - build_push
@@ -290,7 +275,7 @@ jobs:
       signing-enabled: ${{ env.SIGNING_ENABLED }}
     steps:
       - name: Checkout github actions
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: aurelien-etienne/atomic-ci
           ref: ${{ env.INTERNAL_ACTIONS_REF }}
@@ -304,9 +289,6 @@ jobs:
           image-name: ${{ inputs.image-name }}
           image-path: ${{ inputs.image-path }}
           image-tag: ${{ needs.generate_matrix.outputs.tag }}
-          image-description: ${{ inputs.image-description }}
-          docs-url: ${{ inputs.docs-url }}
-          containerfile: ${{ inputs.containerfile }}
           REGISTRY: ${{ inputs.REGISTRY }}
           REGISTRY_USER: ${{ inputs.REGISTRY_USER }}
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
@@ -314,7 +296,7 @@ jobs:
       - uses: ./github-actions/.github/actions/sign
         name: Sign Manifest
         id: sign
-        if: ${{ env.SIGNING_ENABLED == 'true' && env.IS_PUBLISH_REF == 'true' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' && (!startsWith(github.event_name, 'pull_request') || github.event.pull_request.merged == true) }}
         with:
           image-ref: ${{ steps.push_manifest.outputs.image-ref }}@${{ steps.push_manifest.outputs.digest }}
           signing-secret: ${{ secrets.SIGNING_SECRET }}

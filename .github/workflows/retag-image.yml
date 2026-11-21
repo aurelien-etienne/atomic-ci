@@ -32,7 +32,7 @@ on:
 jobs:
   retag-image:
     name: Retag image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Install Crane
@@ -46,11 +46,15 @@ jobs:
           password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Tag image
+        env:
+          TAG: ${{ inputs.tag }}
+          IMAGE: ${{ inputs.image }}
+          DIGEST: ${{ inputs.digest }}
         shell: bash
         run: |
           # Read tags into an array (strips trailing newline) and loop
-          mapfile -t tags <<< "${{ inputs.tag }}"
+          mapfile -t tags <<< "${TAG}"
           for tag in "${tags[@]}"; do
             [[ -z "$tag" ]] && continue
-            crane tag ${{ inputs.image }}@${{ inputs.digest }} "$tag"
+            crane tag ${IMAGE}@${DIGEST} "$tag"
           done
