@@ -86,7 +86,7 @@ on:
         required: false
 
 env:
-  INTERNAL_ACTIONS_REF: sync-v13
+  INTERNAL_ACTIONS_REF: main
 
 jobs:
   generate_matrix:
