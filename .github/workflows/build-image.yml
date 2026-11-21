@@ -116,7 +116,7 @@ on:
 
 env:
   SIGNING_ENABLED: ${{ (secrets.SIGNING_SECRET != null && secrets.SIGNING_SECRET != '') || inputs.KMS_KEY_ALIAS != '' }}
-  INTERNAL_ACTIONS_REF: main
+  INTERNAL_ACTIONS_REF: sync-v13
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.image-name }}
